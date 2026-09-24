@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>原稿用紙に割り付け</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDMincho&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --desk:#dfe4e0;
+  --panel:#f7f8f6;
+  --ink:#222;
+  --muted:#5f6b64;
+  --rule:#c9d1cb;
+  --accent:#2f6b4f;
+  --accent-ink:#fff;
+  --field:#fff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --desk:#1d2320; --panel:#262d29; --ink:#e8ece9; --muted:#a3b0a8;
+    --rule:#3b4640; --accent:#6fb893; --accent-ink:#10231a; --field:#1b201d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --desk:#1d2320; --panel:#262d29; --ink:#e8ece9; --muted:#a3b0a8;
+  --rule:#3b4640; --accent:#6fb893; --accent-ink:#10231a; --field:#1b201d;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;background:var(--desk);color:var(--ink);
+  font-family:"BIZ UDPGothic","Noto Sans JP","Noto Sans CJK JP","Hiragino Sans",sans-serif;
+  font-size:15px;line-height:1.6;
+}
+.app{display:grid;grid-template-columns:minmax(300px,380px) 1fr;height:100%}
+.panel{
+  background:var(--panel);border-right:1px solid var(--rule);
+  overflow-y:auto;padding:20px 20px 28px;display:flex;flex-direction:column;gap:18px;
+}
+h1{
+  margin:0;font-family:"BIZ UDMincho","Noto Serif JP",serif;font-weight:400;
+  font-size:22px;letter-spacing:.08em;
+}
+.lede{margin:2px 0 0;color:var(--muted);font-size:13px}
+label.block{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+textarea{
+  width:100%;min-height:220px;resize:vertical;padding:10px 12px;
+  border:1px solid var(--rule);border-radius:6px;background:var(--field);color:var(--ink);
+  font-family:"BIZ UDMincho","Noto Serif JP",serif;font-size:16px;line-height:1.8;
+}
+textarea:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.textbar{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;color:var(--muted)}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline}
+fieldset{border:0;margin:0;padding:0}
+legend{font-weight:700;font-size:14px;margin-bottom:6px;padding:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--accent);border-radius:6px;overflow:hidden}
+.seg button{
+  border:0;background:transparent;color:var(--accent);padding:9px 0;font:inherit;font-weight:700;cursor:pointer;
+}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sizes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stepper{display:flex;align-items:stretch;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--field)}
+.stepper button{width:40px;border:0;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}
+.stepper button:active{background:var(--rule)}
+.stepper input{
+  width:100%;min-width:0;border:0;border-left:1px solid var(--rule);border-right:1px solid var(--rule);
+  text-align:center;font:inherit;font-size:18px;font-weight:700;background:transparent;color:var(--ink);padding:6px 0;
+  -moz-appearance:textfield;
+}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.unit{font-size:12px;color:var(--muted);margin-top:4px}
+.opt{display:flex;gap:8px;align-items:flex-start;padding:5px 0;cursor:pointer;font-size:14px}
+.opt input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.opt.disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:12px;color:var(--muted);margin:2px 0 0 24px}
+.swatches{display:flex;gap:10px}
+.swatches label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}
+.swatches input{accent-color:var(--accent)}
+.chip{width:16px;height:16px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+.textwrap{flex:1;display:flex;flex-direction:column;min-height:0}
+.textwrap textarea{flex:1;min-height:260px}
+.fab{
+  position:fixed;z-index:8;
+  top:calc(12px + env(safe-area-inset-top,0px));left:12px;
+  display:flex;align-items:center;gap:8px;
+  padding:9px 16px 9px 12px;border:0;border-radius:999px;
+  background:var(--accent);color:var(--accent-ink);
+  font:inherit;font-weight:700;font-size:15px;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.18),0 6px 16px rgba(0,0,0,.12);
+}
+.fab:hover{filter:brightness(1.08)}
+.fab[aria-expanded="true"]{visibility:hidden}
+
+.drawer{
+  position:fixed;top:0;left:0;bottom:0;z-index:10;width:min(380px,92vw);
+  background:var(--panel);border-right:1px solid var(--rule);
+  box-shadow:0 0 24px rgba(0,0,0,.18);
+  transform:translateX(-102%);transition:transform .22s ease;
+  display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.drawer.open{transform:none}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--rule)}
+.drawer-head h2{margin:0;font-size:18px}
+.close{border:0;background:transparent;color:var(--ink);font-size:26px;line-height:1;width:40px;height:40px;cursor:pointer;border-radius:6px}
+.close:focus-visible,.close:hover{background:var(--rule)}
+.drawer-body{overflow-y:auto;padding:18px 20px 28px;display:flex;flex-direction:column;gap:20px}
+.scrim{position:fixed;inset:0;z-index:9;background:rgba(0,0,0,.35)}
+@media (min-width:821px){.scrim{display:none}}
+.privacy{font-size:12px;color:var(--muted);border-top:1px solid var(--rule);padding-top:14px;margin-top:auto}
+.privacy p{margin:0 0 6px}
+.footlinks{display:flex;flex-wrap:wrap;gap:2px 14px}
+.footlinks .linkbtn{font-size:13px}
+dialog.policy{
+  width:min(640px,calc(100vw - 32px));max-height:calc(100% - 48px);padding:0;
+  border:1px solid var(--rule);border-radius:10px;background:var(--panel);color:var(--ink);
+}
+dialog.policy::backdrop{background:rgba(0,0,0,.4)}
+.policy-head{
+  position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--rule);
+}
+.policy-head h2{margin:0;font-size:18px}
+.policy-close{border:0;background:transparent;color:var(--ink);font-size:26px;line-height:1;width:40px;height:40px;cursor:pointer;border-radius:6px}
+.policy-close:hover,.policy-close:focus-visible{background:var(--rule)}
+.policy-body{padding:8px 22px 22px;font-size:14px;line-height:1.8}
+.policy-body h3{font-size:15px;margin:20px 0 4px}
+.policy-body p,.policy-body ul{margin:0 0 8px}
+.policy-body ul{padding-left:1.3em}
+.policy-body .date{color:var(--muted);font-size:13px;margin-top:18px}
+.policy-contact{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+
+.preview{overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.toolbar{
+  position:sticky;top:0;z-index:2;background:var(--desk);
+  display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;
+  padding:12px 24px;border-bottom:1px solid var(--rule);
+}
+.stats{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px;color:var(--muted)}
+.stats b{font-size:17px;color:var(--ink)}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.detail-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--field);border:1px solid var(--accent);color:var(--accent);border-radius:6px;
+  padding:7px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;
+}
+.detail-btn .chev{transition:transform .15s}
+.detail-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.detail-row{
+  flex-basis:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;
+  padding:12px 14px;background:var(--panel);border:1px solid var(--rule);border-radius:8px;
+}
+.detail-row[hidden]{display:none}
+.sel{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.sel select{
+  font:inherit;font-size:14px;color:var(--ink);background:var(--field);
+  border:1px solid var(--rule);border-radius:6px;padding:6px 8px;width:100%;
+}
+.sel select:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.sel.disabled{opacity:.45}
+.toolbar .seg{min-width:170px;background:var(--field)}
+.toolbar .seg button{padding:7px 14px}
+.field{display:flex;align-items:center;gap:6px}
+.flabel{font-size:14px;color:var(--muted);white-space:nowrap}
+.toolbar .stepper{width:124px}
+.toolbar .stepper button{width:36px}
+.toolbar .stepper input{font-size:17px;padding:5px 0}
+.primary{
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;
+  padding:9px 18px;font:inherit;font-weight:700;cursor:pointer;
+}
+.primary:disabled{opacity:.6;cursor:wait}
+.pages{padding:24px;display:flex;flex-direction:column;align-items:center;gap:28px}
+.page{margin:0;max-width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+.page canvas{
+  display:block;max-width:100%;height:auto;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 18px rgba(0,0,0,.08);
+}
+.page figcaption{display:flex;gap:14px;align-items:center;font-size:14px;color:var(--muted)}
+.ghost{
+  background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:6px;
+  padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;
+}
+.toast{
+  position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--panel);padding:10px 18px;border-radius:6px;font-size:14px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.toast.show{opacity:1}
+@media (max-width:820px){
+  body{height:auto}
+  .app{display:block;height:auto}
+  .panel{border-right:0;border-bottom:1px solid var(--rule);overflow:visible}
+  .preview{overflow:visible}
+  .toolbar{top:env(safe-area-inset-top,0px);padding:12px 16px}
+  .pages{padding:16px}
+}
+@media (max-width:820px){
+}
+@media (prefers-reduced-motion: reduce){.toast,.drawer{transition:none}}
+</style>
+<!-- Cloudflare Web Analytics：GitHub Pagesで公開するときに、Cloudflareの管理画面で発行されるタグをここに貼る -->
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <div class="panel-head">
+      <h1>原稿用紙に割り付け</h1>
+      <p class="lede">文章を貼り付けると、右の原稿用紙に一字ずつ割り付けます。</p>
+    </div>
+
+    <div class="textwrap">
+      <label class="block" for="text">文章</label>
+      <textarea id="text" placeholder="ここに文章を貼り付けてください。&#10;段落の最初を一字下げるときは、全角スペースを入れてください。"></textarea>
+      <div class="textbar">
+        <span id="charcount">0字</span>
+        <span><button class="linkbtn" id="sample" type="button">例文を入れる</button>　<button class="linkbtn" id="clear" type="button">消す</button></span>
+      </div>
+    </div>
+
+    <footer class="privacy">
+      <p>入力した文章はこの端末の中だけで処理され、外部には送信されません。文章と設定は次に開いたときのためにこの端末に残ります。</p>
+      <nav class="footlinks" aria-label="サイト情報">
+        <button type="button" class="linkbtn" id="openPrivacy">プライバシーについて</button>
+        <button type="button" class="linkbtn" data-contact="mail">お問い合わせ</button>
+        <button type="button" class="linkbtn" data-contact="copy">アドレスをコピー</button>
+      </nav>
+    </footer>
+  </aside>
+
+  <main class="preview">
+    <div class="toolbar">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="書く向き">
+          <button type="button" data-dir="tate">縦書き</button>
+          <button type="button" data-dir="yoko">横書き</button>
+        </div>
+        <div class="field">
+          <span class="flabel" id="colsLabel">1行</span>
+          <div class="stepper">
+            <button type="button" data-step="cols" data-d="-1" aria-label="1行の字数を減らす">−</button>
+            <input id="cols" type="number" inputmode="numeric" min="5" max="40" aria-labelledby="colsLabel colsUnit">
+            <button type="button" data-step="cols" data-d="1" aria-label="1行の字数を増やす">＋</button>
+          </div>
+          <span class="flabel" id="colsUnit">字</span>
+        </div>
+        <div class="field">
+          <span class="flabel" id="rowsLabel">1枚</span>
+          <div class="stepper">
+            <button type="button" data-step="rows" data-d="-1" aria-label="1枚の行数を減らす">−</button>
+            <input id="rows" type="number" inputmode="numeric" min="2" max="40" aria-labelledby="rowsLabel rowsUnit">
+            <button type="button" data-step="rows" data-d="1" aria-label="1枚の行数を増やす">＋</button>
+          </div>
+          <span class="flabel" id="rowsUnit">行</span>
+        </div>
+        <button class="detail-btn" id="detailToggle" type="button" aria-controls="detailRow" aria-expanded="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></g></svg>
+          詳細設定
+          <svg class="chev" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <button class="primary" id="pdf" type="button">PDFで保存</button>
+      <div class="detail-row" id="detailRow">
+        <label class="sel">
+          <span>句読点・閉じかっこが行頭に来たら</span>
+          <select id="hang">
+            <option value="cell">前の行の最後のマスに入れる</option>
+            <option value="outside">前の行の枠の外に書く</option>
+            <option value="oidashi">前の一字と次の行へ送る</option>
+          </select>
+        </label>
+        <label class="sel" title="小さい「ぁぃぅぇぉっゃゅょゎ」（カタカナも）、「ー」「々」「・」「！」「？」「…」など">
+          <span>小さい「っ」や「ー」などが行頭に来たら</span>
+          <select id="small">
+            <option value="allow">そのまま行頭に書く</option>
+            <option value="cell">前の行の最後のマスに入れる</option>
+            <option value="outside">前の行の枠の外に書く</option>
+            <option value="oidashi">前の一字と次の行へ送る</option>
+          </select>
+        </label>
+        <label class="sel" id="pairLabel">
+          <span>半角数字（横書きのみ）</span>
+          <select id="pair">
+            <option value="1">1マスに2字</option>
+            <option value="0">1マスに1字</option>
+          </select>
+        </label>
+        <label class="sel">
+          <span>罫線の色</span>
+          <select id="color">
+            <option value="green">緑</option>
+            <option value="red">赤</option>
+            <option value="gray">灰</option>
+          </select>
+        </label>
+      </div>
+      <div class="stats" id="stats" aria-live="polite"></div>
+    </div>
+    <div class="pages" id="pages"></div>
+  </main>
+</div>
+<dialog class="policy" id="privacyDialog" aria-labelledby="policyTitle">
+  <div class="policy-head">
+    <h2 id="policyTitle">プライバシーについて</h2>
+    <button type="button" class="policy-close" id="closePrivacy" aria-label="閉じる">×</button>
+  </div>
+  <div class="policy-body">
+    <h3>入力した文章について</h3>
+    <p>原稿用紙への割り付けや、画像・PDFの作成は、すべてお使いの端末のブラウザの中で行われます。入力した文章が外部に送信されることはなく、運営者も内容を見ることはできません。</p>
+    <p>入力した文章と設定は、次に開いたときに続きから使えるよう、お使いのブラウザの中（ローカルストレージ）にだけ保存されます。消したいときは「消す」を押すか、ブラウザのサイトデータを削除してください。</p>
+
+    <h3>アクセス解析について</h3>
+    <p>利用状況を把握し、ツールの改善に役立てるため、Cloudflare, Inc. の提供する「Cloudflare Web Analytics」を利用しています。このサービスはCookieを使わず、個人を特定する情報を収集しません。集計されるのは、ページが開かれた回数、参照元のページ、国や地域、端末やブラウザの種類などの統計的な情報です。</p>
+
+    <h3>外部サービスの読み込みについて</h3>
+    <p>このツールは、表示や機能のために次の外部サービスを利用しています。ページを開いた際、IPアドレスやブラウザの種類などの接続情報が各提供元に送られます。これらの情報の扱いは、各提供元のプライバシーポリシーに従います。</p>
+    <ul>
+      <li>Google Fonts（Google LLC）：画面と原稿用紙のフォント</li>
+      <li>cdnjs（Cloudflare, Inc.）：PDFを作成するための部品</li>
+      <li>GitHub Pages（GitHub, Inc.）：このページの公開</li>
+    </ul>
+
+    <h3>免責事項</h3>
+    <p>このサイトを利用したことによって生じたいかなる損害についても、運営者は責任を負いません（脱字や、行・体裁の誤りなどを含みます）。利用者ご自身の責任においてご利用ください。</p>
+
+    <h3>このページの変更について</h3>
+    <p>この内容は、必要に応じて予告なく変更することがあります。変更した場合は、このページでお知らせします。</p>
+
+    <h3>お問い合わせ</h3>
+    <p>ご意見や不具合の報告は、メールでお送りください。</p>
+    <div class="policy-contact">
+      <button type="button" class="ghost" data-contact="mail">メールで問い合わせる</button>
+      <button type="button" class="ghost" data-contact="copy">アドレスをコピー</button>
+    </div>
+
+    <p class="date">2026年9月24日 制定</p>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- 設定と保存 ---------- */
+const STORE_KEY = "genkou-yoshi:v1";
+const DEFAULTS = { text:"", dir:"tate", cols:20, rows:20, hang:"cell", small:"oidashi", pair:true, color:"green" };
+let state = { ...DEFAULTS };
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+  if (saved && typeof saved === "object") state = { ...DEFAULTS, ...saved };
+} catch (e) {}
+function persist(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+const COLORS = { green:"#3f7d5c", red:"#b8452f", gray:"#6b6b6b" };
+const PAPER_FONT = '"BIZ UDMincho","Noto Serif JP","Noto Serif CJK JP","Hiragino Mincho ProN","Yu Mincho",serif';
+const LABEL_FONT = '"BIZ UDPGothic","Noto Sans JP","Noto Sans CJK JP",sans-serif';
+
+/* ---------- 文字の分類 ---------- */
+const PUNCT = "、。，．,.";
+const CLOSE = "」』）)】〕〉》］]｝}〙〗’”";
+const OPEN  = "「『（(【〔〈《［[｛{〘〖‘“";
+const SMALL = "ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶ";
+const HEAD_OTHER = SMALL + "々ゝゞヽヾー・：；！？!?:;…‥";
+const ROTATE = "ー－―‐-–—…‥〜～~（）()「」『』【】〔〕〈〉《》［］[]｛｝{}〘〙〖〗＝=＜＞<>：:；;｜|";
+const isHangable = c => PUNCT.includes(c) || CLOSE.includes(c);
+const isOpen     = c => c.length === 1 && OPEN.includes(c);
+
+/* ---------- レイアウト：文章 → ページ・行・マス ---------- */
+function tokenize(para, opt){
+  const chars = Array.from(para);
+  const units = [];
+  for (let i = 0; i < chars.length; i++){
+    const c = chars[i];
+    if (opt.dir === "yoko" && opt.pair && /[0-9]/.test(c) && /[0-9]/.test(chars[i+1] || "")){
+      units.push(c + chars[i+1]); i++;
+    } else units.push(c);
+  }
+  return units;
+}
+
+// 行頭に来てはいけない文字なら、その処理方法を返す（問題なければ null）
+function headRule(c, opt){
+  if (c.length !== 1) return null;
+  if (isHangable(c)) return opt.hang;
+  if (HEAD_OTHER.includes(c)) return opt.small === "allow" ? null : opt.small;
+  return null;
+}
+
+function breakParagraph(units, opt){
+  const cols = opt.cols;
+  const isHeadNG = c => headRule(c, opt) !== null;
+  const lines = [];
+  let cur = [];
+  for (let i = 0; i < units.length; i++){
+    const u = units[i];
+    if (cur.length === cols){
+      const mode = headRule(u, opt);
+      if (mode){
+        if (mode !== "oidashi"){
+          const hang = [u];
+          while (hang.length < 2 && i + 1 < units.length && headRule(units[i+1], opt) === mode) hang.push(units[++i]);
+          lines.push({ cells:cur, hang, hangMode:mode });
+          cur = [];
+          continue;
+        }
+        const carry = [];
+        do { carry.unshift(cur.pop()); }
+        while (cur.length > 1 && (isHeadNG(carry[0]) || isOpen(cur[cur.length-1])));
+        lines.push({ cells:cur });
+        cur = carry;
+      } else {
+        lines.push({ cells:cur });
+        cur = [];
+      }
+    }
+    if (cur.length === cols - 1 && isOpen(u) && i < units.length - 1){
+      lines.push({ cells:cur });
+      cur = [];
+    }
+    cur.push(u);
+  }
+  lines.push({ cells:cur });
+  return lines;
+}
+
+function layout(text, opt){
+  let t = text.replace(/\r\n?/g, "\n").replace(/\t/g, "　").replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "");
+  if (t.endsWith("\n")) t = t.slice(0, -1);
+  const lines = [];
+  for (const para of t.split("\n")) lines.push(...breakParagraph(tokenize(para, opt), opt));
+  const pages = [];
+  for (let i = 0; i < lines.length; i += opt.rows) pages.push(lines.slice(i, i + opt.rows));
+  if (!pages.length) pages.push([]);
+  return pages;
+}
+
+/* ---------- 描画：ページ → Canvas ---------- */
+let calib = 0.38;
+function calibrate(){
+  const c = document.createElement("canvas").getContext("2d");
+  c.font = `100px ${PAPER_FONT}`;
+  const m = c.measureText("永");
+  if (m.actualBoundingBoxAscent) calib = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2 / 100;
+}
+
+function geometry(opt, S){
+  const tate = opt.dir === "tate";
+  const G = Math.round(S * 0.32);
+  const M = Math.round(S * 1.1);
+  const ME = (opt.hang === "outside" || opt.small === "outside") ? Math.round(S * 2.4) : M;
+  let gridW, gridH, W, H;
+  if (tate){ gridW = opt.rows * (S + G) + G; gridH = opt.cols * S; W = gridW + 2*M; H = gridH + M + ME; }
+  else     { gridW = opt.cols * S; gridH = opt.rows * (S + G) + G; W = gridW + M + ME; H = gridH + 2*M; }
+  const cell = (j, k) => tate
+    ? { x: M + G + (opt.rows - 1 - j) * (S + G), y: M + k * S }
+    : { x: M + k * S, y: M + G + j * (S + G) };
+  return { tate, S, G, M, gridW, gridH, W, H, cell };
+}
+
+function glyph(ctx, ch, cx, cy, size, tate){
+  const fs = size * 0.74;
+  ctx.font = `${fs}px ${PAPER_FONT}`;
+  const dy = fs * calib;
+  if (tate && ch.length === 1){
+    if (PUNCT.includes(ch)){ ctx.fillText(ch, cx + fs*0.58, cy + dy - fs*0.58); return; }
+    if (SMALL.includes(ch)){ ctx.fillText(ch, cx + fs*0.1, cy + dy - fs*0.1); return; }
+    if (ROTATE.includes(ch)){
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 2); ctx.fillText(ch, 0, dy); ctx.restore(); return;
+    }
+  }
+  ctx.fillText(ch, cx, cy + dy);
+}
+
+function drawPage(canvas, lines, opt, S, pageNo, total){
+  const g = geometry(opt, S);
+  canvas.width = g.W; canvas.height = g.H;
+  const ctx = canvas.getContext("2d");
+  const rule = COLORS[opt.color] || COLORS.green;
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, g.W, g.H);
+
+  // 罫線
+  ctx.strokeStyle = rule;
+  for (let j = 0; j < opt.rows; j++){
+    const o = g.cell(j, 0);
+    ctx.lineWidth = Math.max(1, S * 0.03);
+    if (g.tate) ctx.strokeRect(o.x, o.y, S, g.gridH); else ctx.strokeRect(o.x, o.y, g.gridW, S);
+    ctx.lineWidth = Math.max(1, S * 0.018);
+    ctx.beginPath();
+    for (let k = 1; k < opt.cols; k++){
+      const c = g.cell(j, k);
+      if (g.tate){ ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + S, c.y); }
+      else       { ctx.moveTo(c.x, c.y); ctx.lineTo(c.x, c.y + S); }
+    }
+    ctx.stroke();
+  }
+  ctx.lineWidth = Math.max(2, S * 0.06);
+  ctx.strokeRect(g.M, g.M, g.gridW, g.gridH);
+
+  // ページ番号（左上）と 字数×行数（右下）
+  ctx.fillStyle = rule;
+  ctx.font = `${Math.round(S * 0.36)}px ${LABEL_FONT}`;
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
+  ctx.fillText(`${pageNo} / ${total}`, g.M, g.M - S * 0.4);
+  ctx.textAlign = "right";
+  ctx.fillText(`${opt.cols}×${opt.rows}`, g.M + g.gridW, g.H - S * 0.35);
+
+  // 文字
+  ctx.fillStyle = "#1a1a1a";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  lines.forEach((line, j) => {
+    const last = line.cells.length - 1;
+    line.cells.forEach((ch, k) => {
+      const o = g.cell(j, k);
+      const hasHang = line.hang && k === last && line.hangMode === "cell";
+      if (hasHang){
+        const mx = g.tate ? -0.1 : -0.14, my = g.tate ? -0.14 : -0.06;
+        glyph(ctx, ch, o.x + S*(0.5 + mx), o.y + S*(0.5 + my), S * 0.68, g.tate);
+      } else {
+        glyph(ctx, ch, o.x + S/2, o.y + S/2, S, g.tate);
+      }
+    });
+    if (!line.hang) return;
+    const n = line.hang.length;
+    if (line.hangMode === "cell"){
+      const o = g.cell(j, Math.max(0, last));
+      const h = S * 0.5;
+      line.hang.forEach((ch, i) => {
+        const back = (n - 1 - i) * h * 0.72;
+        const cx = o.x + S - h/2 - (g.tate ? 0 : back);
+        const cy = o.y + S - h/2 - (g.tate ? back : 0);
+        glyph(ctx, ch, cx, cy, h, g.tate);
+      });
+    } else {
+      const o = g.cell(j, opt.cols - 1);
+      const h = S * 0.8;
+      line.hang.forEach((ch, i) => {
+        const step = h * 0.5 + i * h * 0.85 + S * 0.06;
+        const cx = g.tate ? o.x + S/2 : o.x + S + step;
+        const cy = g.tate ? o.y + S + step : o.y + S/2;
+        glyph(ctx, ch, cx, cy, h, g.tate);
+      });
+    }
+  });
+}
+
+/* ---------- 画面 ---------- */
+const $ = s => document.querySelector(s);
+const textEl = $("#text"), pagesEl = $("#pages"), statsEl = $("#stats");
+let currentPages = [[]];
+
+function opt(){ return { dir:state.dir, cols:state.cols, rows:state.rows, hang:state.hang, small:state.small, pair:state.pair, color:state.color }; }
+
+function syncControls(){
+  textEl.value = state.text;
+  document.querySelectorAll("[data-dir]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.dir === state.dir)));
+  $("#cols").value = state.cols; $("#rows").value = state.rows;
+  $("#hang").value = state.hang;
+  $("#small").value = state.small;
+  $("#color").value = state.color;
+  const pair = $("#pair"); pair.value = state.pair ? "1" : "0";
+  const yoko = state.dir === "yoko";
+  pair.disabled = !yoko;
+  $("#pairLabel").classList.toggle("disabled", !yoko);
+}
+
+function render(){
+  const o = opt();
+  currentPages = layout(state.text, o);
+  const total = currentPages.length;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const S = Math.round(34 * dpr);
+
+  while (pagesEl.children.length > total) pagesEl.lastChild.remove();
+  currentPages.forEach((lines, i) => {
+    let fig = pagesEl.children[i];
+    if (!fig){
+      fig = document.createElement("figure"); fig.className = "page";
+      fig.innerHTML = '<canvas></canvas><figcaption><span></span><button type="button" class="ghost">画像で保存</button></figcaption>';
+      fig.querySelector("button").addEventListener("click", () => savePng(Number(fig.dataset.index)));
+      pagesEl.appendChild(fig);
+    }
+    fig.dataset.index = i;
+    const canvas = fig.querySelector("canvas");
+    drawPage(canvas, lines, o, S, i + 1, total);
+    canvas.style.width = (canvas.width / dpr) + "px";
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", `原稿用紙 ${i + 1}枚目`);
+    fig.querySelector("span").textContent = `${i + 1}枚目`;
+  });
+
+  const chars = Array.from(state.text.replace(/\r?\n/g, "")).length;
+  $("#charcount").textContent = `${chars}字`;
+  const lastLines = currentPages[total - 1].length;
+  statsEl.innerHTML = "";
+  const add = html => { const s = document.createElement("span"); s.innerHTML = html; statsEl.appendChild(s); };
+  add(`原稿用紙 <b>${total}</b>枚${total > 0 && state.text ? `（${total}枚目は${lastLines}行目まで）` : ""}`);
+}
+
+let timer = 0;
+function schedule(){
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    render();
+    const probe = `40px ${PAPER_FONT}`;
+    if (document.fonts && !document.fonts.check(probe, state.text || "永")){
+      document.fonts.load(probe, state.text || "永").then(render).catch(() => {});
+    }
+  }, 120);
+}
+function update(patch){ Object.assign(state, patch); persist(); syncControls(); schedule(); }
+
+textEl.addEventListener("input", () => { state.text = textEl.value; persist(); schedule(); });
+document.querySelectorAll("[data-dir]").forEach(b => b.addEventListener("click", () => update({ dir:b.dataset.dir })));
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const LIMITS = { cols:[5, 40], rows:[2, 40] };
+document.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.step; update({ [k]: clamp(state[k] + Number(b.dataset.d), ...LIMITS[k]) });
+}));
+["cols", "rows"].forEach(k => $("#" + k).addEventListener("change", e => {
+  const v = parseInt(e.target.value, 10);
+  update({ [k]: Number.isFinite(v) ? clamp(v, ...LIMITS[k]) : state[k] });
+}));
+["hang", "small", "color"].forEach(k => $("#" + k).addEventListener("change", e => update({ [k]: e.target.value })));
+$("#pair").addEventListener("change", e => update({ pair: e.target.value === "1" }));
+$("#clear").addEventListener("click", () => { update({ text:"" }); textEl.focus(); });
+$("#sample").addEventListener("click", () => update({ text:
+"　私が高校に入って一番驚いたのは、授業の始まる時間だった。夕方の五時半、空がオレンジ色に変わるころに一時間目が始まる。\n　最初は「本当にこれで学校なのか」と思った。けれど、同じ教室で働きながら学ぶ先輩の話を聞くうちに、考えが変わっていった。\n　今では、二〇二六年の春に入学してよかったと心から思っている。" }));
+
+/* ---------- 詳細設定の開閉 ---------- */
+const detailBtn = $("#detailToggle"), detailRow = $("#detailRow");
+function setDetail(open){
+  detailRow.hidden = !open;
+  detailBtn.setAttribute("aria-expanded", String(open));
+  try { localStorage.setItem(STORE_KEY + ":detail", open ? "1" : "0"); } catch (e) {}
+}
+detailBtn.addEventListener("click", () => setDetail(detailRow.hidden));
+let detailOpen = true;
+try { detailOpen = localStorage.getItem(STORE_KEY + ":detail") !== "0"; } catch (e) {}
+setDetail(detailOpen);
+
+/* ---------- 保存 ---------- */
+const toastEl = $("#toast");
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add("show"); setTimeout(() => toastEl.classList.remove("show"), 2400); }
+
+const downloadsP = (window.claude && typeof window.claude.use === "function")
+  ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+
+async function saveBlob(blob, filename){
+  const d = await downloadsP;
+  if (d){
+    try { await d.save({ filename, data: blob }); toast("保存しました"); }
+    catch (e){
+      if (e && e.code === "declined") return;
+      if (e && e.code === "rate_limited"){ toast("少し待ってからもう一度押してください"); return; }
+      toast("この画面では保存できません");
+    }
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+const EXPORT_S = 80;
+function exportCanvas(i){
+  const c = document.createElement("canvas");
+  drawPage(c, currentPages[i], opt(), EXPORT_S, i + 1, currentPages.length);
+  return c;
+}
+async function savePng(i){
+  await document.fonts.ready;
+  const c = exportCanvas(i);
+  c.toBlob(b => b && saveBlob(b, `原稿用紙_${i + 1}枚目.png`), "image/png");
+}
+$("#pdf").addEventListener("click", async () => {
+  const btn = $("#pdf");
+  if (!window.jspdf || !window.jspdf.jsPDF){ toast("PDFの準備ができていません。再読み込みしてください"); return; }
+  btn.disabled = true; btn.textContent = "作成中…";
+  try {
+    await document.fonts.ready;
+    const first = exportCanvas(0);
+    const landscape = first.width > first.height;
+    const doc = new window.jspdf.jsPDF({ orientation: landscape ? "landscape" : "portrait", unit:"mm", format:"a4" });
+    const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight(), m = 8;
+    for (let i = 0; i < currentPages.length; i++){
+      const c = i === 0 ? first : exportCanvas(i);
+      const r = Math.min((pw - 2*m) / c.width, (ph - 2*m) / c.height);
+      const w = c.width * r, h = c.height * r;
+      if (i > 0) doc.addPage("a4", landscape ? "landscape" : "portrait");
+      doc.addImage(c.toDataURL("image/jpeg", 0.92), "JPEG", (pw - w) / 2, (ph - h) / 2, w, h);
+    }
+    await saveBlob(doc.output("blob"), "原稿用紙.pdf");
+  } catch (e){
+    toast("PDFを作れませんでした");
+  } finally {
+    btn.disabled = false; btn.textContent = "PDFで保存";
+  }
+});
+
+/* ---------- プライバシー・お問い合わせ ---------- */
+const privacyDialog = $("#privacyDialog");
+$("#openPrivacy").addEventListener("click", () => privacyDialog.showModal());
+$("#closePrivacy").addEventListener("click", () => privacyDialog.close());
+privacyDialog.addEventListener("click", e => { if (e.target === privacyDialog) privacyDialog.close(); });
+
+// 自動収集されないよう、アドレスは分割・反転して保持し、使う瞬間に組み立てる
+const contactParts = ["ppaokneg", "yriuqni_", "duolci", "moc"];
+function contactAddress(){
+  const [a, b, c, d] = contactParts.map(x => x.split("").reverse().join(""));
+  return a + b + String.fromCharCode(64) + c + String.fromCharCode(46) + d;
+}
+async function copyContact(){
+  const text = contactAddress();
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("アドレスをコピーしました");
+    return;
+  } catch (e) {}
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) {}
+  ta.remove();
+  toast(ok ? "アドレスをコピーしました" : "コピーできませんでした");
+}
+document.querySelectorAll("[data-contact]").forEach(b => b.addEventListener("click", () => {
+  if (b.dataset.contact === "copy"){ copyContact(); return; }
+  const subject = encodeURIComponent("原稿用紙に割り付け：お問い合わせ");
+  window.location.href = "mailto:" + contactAddress() + "?subject=" + subject;
+}));
+
+/* ---------- 起動 ---------- */
+syncControls();
+render();
+if (document.fonts){
+  document.fonts.load(`40px ${PAPER_FONT}`, "永" + (state.text || "")).then(() => { calibrate(); render(); }).catch(() => {});
+} else calibrate();
+window.addEventListener("resize", () => schedule());
+})();
+</script>
+</body>
+</html>
