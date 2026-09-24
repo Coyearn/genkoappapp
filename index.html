@@ -3,7 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>原稿用紙に貼り付けくん</title>
+<title>原稿用紙に割り付け｜文章を原稿用紙に変換（縦書き・横書き・PDF保存）</title>
+<meta name="description" content="文章を貼り付けるだけで、縦書き・横書きの原稿用紙に自動で割り付ける無料ツール。字数・行数を自由に設定でき、句読点などの禁則処理にも対応。PDFや画像で保存できます。Chromebookでも使えます。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="原稿用紙に割り付け｜文章を原稿用紙に変換">
+<meta property="og:description" content="文章を貼り付けるだけで、縦書き・横書きの原稿用紙に自動で割り付ける無料ツール。字数・行数を自由に設定でき、句読点などの禁則処理にも対応。PDFや画像で保存できます。Chromebookでも使えます。">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"原稿用紙に割り付け","applicationCategory":"EducationalApplication","operatingSystem":"Chrome OS, Windows, macOS, iOS, Android","browserRequirements":"最新のWebブラウザ","inLanguage":"ja","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"description":"文章を貼り付けるだけで、縦書き・横書きの原稿用紙に自動で割り付ける無料ツール。字数・行数を自由に設定でき、句読点などの禁則処理にも対応。PDFや画像で保存できます。Chromebookでも使えます。"}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDMincho&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
@@ -136,7 +145,13 @@ dialog.policy::backdrop{background:rgba(0,0,0,.4)}
 .policy-body{padding:8px 22px 22px;font-size:14px;line-height:1.8}
 .policy-body h3{font-size:15px;margin:20px 0 4px}
 .policy-body p,.policy-body ul{margin:0 0 8px}
-.policy-body ul{padding-left:1.3em}
+.policy-body ul,.policy-body ol{padding-left:1.4em}
+.policy-body ol{margin:0 0 8px}
+.policy-body dl{margin:0 0 8px}
+.policy-body dt{font-weight:700;margin-top:10px}
+.policy-body dd{margin:2px 0 0}
+.policy-body > p:first-child{margin-top:12px}
+.lede-link{font-size:13px;margin-left:6px}
 .policy-body .date{color:var(--muted);font-size:13px;margin-top:18px}
 .policy-contact{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 
@@ -209,6 +224,7 @@ dialog.policy::backdrop{background:rgba(0,0,0,.4)}
 }
 @media (prefers-reduced-motion: reduce){.toast,.drawer{transition:none}}
 </style>
+<meta name="google-site-verification" content="F3JZ5_Vmpmg96ravOOTfHgqMF42Sesl4f9elja0NjtU" />
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "be55559e71bb45cbaa1644254de89099"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
 <body>
@@ -216,7 +232,7 @@ dialog.policy::backdrop{background:rgba(0,0,0,.4)}
   <aside class="panel">
     <div class="panel-head">
       <h1>原稿用紙に割り付け</h1>
-      <p class="lede">文章を貼り付けると、右の原稿用紙に一字ずつ割り付けます。</p>
+      <p class="lede">文章を貼り付けると、右の原稿用紙に一字ずつ割り付けます。<button type="button" class="linkbtn lede-link" data-open="aboutDialog">使い方</button></p>
     </div>
 
     <div class="textwrap">
@@ -231,6 +247,7 @@ dialog.policy::backdrop{background:rgba(0,0,0,.4)}
     <footer class="privacy">
       <p>入力した文章はこの端末の中だけで処理され、外部には送信されません。文章と設定は次に開いたときのためにこの端末に残ります。</p>
       <nav class="footlinks" aria-label="サイト情報">
+        <button type="button" class="linkbtn" data-open="aboutDialog">このツールについて・使い方</button>
         <button type="button" class="linkbtn" id="openPrivacy">プライバシーについて</button>
         <button type="button" class="linkbtn" data-contact="mail">お問い合わせ</button>
         <button type="button" class="linkbtn" data-contact="copy">アドレスをコピー</button>
@@ -309,6 +326,45 @@ dialog.policy::backdrop{background:rgba(0,0,0,.4)}
     <div class="pages" id="pages"></div>
   </main>
 </div>
+<dialog class="policy" id="aboutDialog" aria-labelledby="aboutTitle">
+  <div class="policy-head">
+    <h2 id="aboutTitle">このツールについて</h2>
+    <button type="button" class="policy-close" data-close aria-label="閉じる">×</button>
+  </div>
+  <div class="policy-body">
+    <p>「原稿用紙に割り付け」は、パソコンやタブレットで書いた文章を、原稿用紙のマス目に一字ずつ自動で割り付けて表示する無料のWebツールです。作文や小論文、読書感想文、志望理由書などを、決められた字数や枚数に収まるか、原稿用紙に書いたときにどう見えるかを確かめるのに使えます。ソフトのインストールは不要で、ChromebookのChromeでもそのまま使えます。</p>
+
+    <h3>使い方</h3>
+    <ol>
+      <li>左の「文章」の欄に、文章を貼り付けるか入力します。段落の最初を一字下げるときは、全角スペースを入れます。</li>
+      <li>原稿用紙の上の欄で、縦書きか横書きか、1行の字数と1枚の行数を選びます。400字詰め（20字×20行）のほか、200字詰めや独自の字数にもできます。</li>
+      <li>必要に応じて「詳細設定」で、句読点や小さい「っ」が行頭に来たときの処理、罫線の色などを選びます。</li>
+      <li>「PDFで保存」で全ページをまとめて、各ページの「画像で保存」でそのページだけを保存できます。</li>
+    </ol>
+
+    <h3>原稿用紙の書き方ルール（禁則処理）に対応</h3>
+    <p>原稿用紙では、句読点（、。）や閉じかっこ（」』）を行の最初のマスに書かないのが一般的です。このツールでは、行頭に来てしまう句読点や閉じかっこを「前の行の最後のマスに一緒に入れる」「前の行の枠の外に書く」「前の一字と一緒に次の行へ送る」の三つから選んで処理できます。小さい「っ」「ゃ」や長音の「ー」についても、そのまま書くか、同じように処理するかを選べます。開きかっこ（「『）が行の最後のマスに来ないようにする処理も自動で行います。</p>
+    <p>学校や先生によって指導の仕方が異なるため、指示されたルールに合わせて切り替えてください。</p>
+
+    <h3>こんなときに</h3>
+    <ul>
+      <li>作文や読書感想文を、原稿用紙に清書する前に確認したい</li>
+      <li>小論文や志望理由書が、指定の字数・枚数に収まるか見たい</li>
+      <li>Chromebookで書いた文章を、原稿用紙の形で印刷・提出したい</li>
+      <li>授業で、生徒の文章を原稿用紙の形で見せたい</li>
+    </ul>
+
+    <h3>よくある質問</h3>
+    <dl>
+      <dt>入力した文章はどこかに保存されますか？</dt>
+      <dd>文章の処理はすべてお使いの端末の中で行われ、外部には送信されません。次に開いたときのために、お使いのブラウザの中にだけ保存されます。</dd>
+      <dt>印刷するとどのくらいの大きさになりますか？</dt>
+      <dd>PDFはA4用紙に収まる大きさで作成されます。縦書きの400字詰めでは、A4横向きになります。</dd>
+      <dt>半角の数字はどう書かれますか？</dt>
+      <dd>横書きのときは、半角数字を1マスに2字入れるか、1マスに1字入れるかを選べます。</dd>
+    </dl>
+  </div>
+</dialog>
 <dialog class="policy" id="privacyDialog" aria-labelledby="policyTitle">
   <div class="policy-head">
     <h2 id="policyTitle">プライバシーについて</h2>
@@ -716,6 +772,10 @@ const privacyDialog = $("#privacyDialog");
 $("#openPrivacy").addEventListener("click", () => privacyDialog.showModal());
 $("#closePrivacy").addEventListener("click", () => privacyDialog.close());
 privacyDialog.addEventListener("click", e => { if (e.target === privacyDialog) privacyDialog.close(); });
+const aboutDialog = $("#aboutDialog");
+document.querySelectorAll('[data-open="aboutDialog"]').forEach(b => b.addEventListener("click", () => aboutDialog.showModal()));
+aboutDialog.querySelector("[data-close]").addEventListener("click", () => aboutDialog.close());
+aboutDialog.addEventListener("click", e => { if (e.target === aboutDialog) aboutDialog.close(); });
 
 // 自動収集されないよう、アドレスは分割・反転して保持し、使う瞬間に組み立てる
 const contactParts = ["ppaokneg", "yriuqni_", "duolci", "moc"];
